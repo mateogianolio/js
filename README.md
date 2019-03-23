@@ -1,4 +1,6 @@
-# [![](https://i.imgur.com/rb8oPur.png)](http://turbo.github.io)
+# [![](https://i.imgur.com/rb8oPur.png)](http://turbo.github.io) 
+
+![travis](https://img.shields.io/travis/mateogianolio/js.svg?style=flat&label=build) [![Maintainability](https://api.codeclimate.com/v1/badges/a7b4fc7387cbda0fe595/maintainability)](https://codeclimate.com/github/mateogianolio/js/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/a7b4fc7387cbda0fe595/test_coverage)](https://codeclimate.com/github/mateogianolio/js/test_coverage)
 
 turbo.js is a small library that makes it easier to perform complex calculations that can be done in parallel. The actual calculation performed (the *kernel* executed) uses the GPU for execution. This enables you to work on an array of values all at once.
 
