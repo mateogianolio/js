@@ -1,15 +1,16 @@
 {
-  "name": "turbojs",
-  "version": "1.0.2",
+  "name": "@mateogianolio/turbojs",
+  "version": "2.0.0",
   "description": "GPGPU for the web.",
   "main": "built/index.js",
   "scripts": {
+    "test": "mochify --plugin tsify ./src/*.spec.ts",
     "lint": "tslint -p . -c tslint.json 'src/*.ts'",
     "build": "tsc"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/turbo/js.git"
+    "url": "git+https://github.com/mateogianolio/js.git"
   },
   "keywords": [
     "webgl",
@@ -18,11 +19,15 @@
   "author": "turbo",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/turbo/js/issues"
+    "url": "https://github.com/mateogianolio/js/issues"
   },
-  "homepage": "https://github.com/turbo/js#readme",
+  "homepage": "https://github.com/mateogianolio/js#readme",
   "devDependencies": {
+    "@types/mocha": "^5.2.6",
     "@types/node": "^11.11.6",
+    "mocha": "^6.0.2",
+    "mochify": "^6.1.1",
+    "tsify": "^4.0.1",
     "tslint": "^5.14.0",
     "typescript": "^3.3.4000"
   }
