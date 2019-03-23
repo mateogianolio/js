@@ -14,7 +14,12 @@ const initGLFromCanvas: (canvas: HTMLCanvasElement) => WebGLRenderingContext = (
     antialias: false,
   };
 
-  return canvas.getContext('webgl', attr) as WebGLRenderingContext;
+  const ctx: WebGLRenderingContext | CanvasRenderingContext2D | null = canvas.getContext('webgl', attr);
+  if (ctx === null) {
+    throw new Error('turbojs: gl.getContext() returned null.');
+  }
+
+  return ctx as WebGLRenderingContext;
 };
 
 const gl: WebGLRenderingContext = initGLFromCanvas(document.createElement('canvas'));
