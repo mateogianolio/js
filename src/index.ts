@@ -1,5 +1,5 @@
 import {
-  TypedArray,
+  IPT,
   TypedArrayConstructor,
 } from './types';
 
@@ -14,7 +14,11 @@ const initGLFromCanvas: (canvas: HTMLCanvasElement) => WebGLRenderingContext = (
     antialias: false,
   };
 
-  const ctx: WebGLRenderingContext | CanvasRenderingContext2D | null = canvas.getContext('webgl', attr);
+  let ctx: WebGLRenderingContext | CanvasRenderingContext2D | null = canvas.getContext('webgl', attr);
+  if (ctx === null) {
+    ctx = canvas.getContext('experimental-webgl', attr);
+  }
+
   if (ctx === null) {
     throw new Error('turbojs: gl.getContext() returned null.');
   }
@@ -99,8 +103,8 @@ if (gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS) === null) {
 }
 
 // Transfer data onto clamped texture and turn off any filtering
-const createTexture: (data: TypedArray, size: number) => WebGLTexture = (
-  data: TypedArray,
+const createTexture: (data: Float32Array, size: number) => WebGLTexture = (
+  data: Float32Array,
   size: number
 ): WebGLTexture => {
   const texture: WebGLTexture | null = gl.createTexture();
@@ -122,10 +126,10 @@ const createTexture: (data: TypedArray, size: number) => WebGLTexture = (
 };
 
 // Run code against a pre-allocated array
-export const run: (data: TypedArray, code: string) => TypedArray = (
-  data: TypedArray,
+export const run: (ipt: IPT, code: string) => Float32Array = (
+  ipt: IPT,
   code: string
-): TypedArray => {
+): Float32Array => {
   const fragmentShader: WebGLShader | null = gl.createShader(gl.FRAGMENT_SHADER);
   if (fragmentShader === null) {
     throw new Error('turbojs: gl.createShader() returned null.');
@@ -140,16 +144,16 @@ export const run: (data: TypedArray, code: string) => TypedArray = (
     const lines: string[] = code.split('\n');
 
     throw new Error(`
-      ERROR: Could not build shader (fatal).
+ERROR: Could not build shader (fatal).
 
-      ------------------ KERNEL CODE DUMP ------------------
-      ${lines
-        .map((line: string, i: number): string => `${stdlib.split('\n').length + i}> ${line}`)
-        .join('\n')
-      }
+------------------ KERNEL CODE DUMP ------------------
+${lines
+  .map((line: string, i: number): string => `${stdlib.split('\n').length + i}> ${line}`)
+  .join('\n')
+}
 
-      --------------------- ERROR  LOG ---------------------
-      ${gl.getShaderInfoLog(fragmentShader)}
+--------------------- ERROR  LOG ---------------------
+${gl.getShaderInfoLog(fragmentShader)}
     `);
   }
 
@@ -176,24 +180,37 @@ export const run: (data: TypedArray, code: string) => TypedArray = (
 
   gl.useProgram(program);
 
-  const size: number = Math.sqrt(data.length) / 4;
-  const texture: WebGLTexture = createTexture(data, size);
+  const size: number = Math.sqrt(ipt.data.length) / 4;
+  const texture: WebGLTexture = createTexture(ipt.data, size);
 
   gl.viewport(0, 0, size, size);
   gl.bindFramebuffer(gl.FRAMEBUFFER, gl.createFramebuffer());
 
   // Typed arrays speed this up tremendously.
-  const nTexture: WebGLTexture = createTexture(new Float32Array(data.length), size);
+  const nTexture: WebGLTexture = createTexture(new Float32Array(ipt.data.length), size);
 
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, nTexture, 0);
 
   // Test for mobile bug MDN->WebGL_best_practices, bullet 7
-  const framebufferStatus: number = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-  if (framebufferStatus !== gl.FRAMEBUFFER_COMPLETE) {
-    throw new Error(`
-      turbojs: Error attaching float texture to framebuffer. Your device is probably incompatible.
-      Error info: ${framebufferStatus}
-    `);
+  switch (gl.checkFramebufferStatus(gl.FRAMEBUFFER)) {
+    case gl.FRAMEBUFFER_COMPLETE:
+      break;
+    case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+      throw new Error(`
+turbojs: The attachment types are mismatched or not all framebuffer attachment points
+are framebuffer attachment complete.`
+      );
+    case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+      throw new Error(`turbojs: There is no attachment.`);
+    case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+      throw new Error(`turbojs: Height and width of the attachment are not the same.`);
+    case gl.FRAMEBUFFER_UNSUPPORTED:
+      throw new Error(`
+turbojs: The format of the attachment is not supported or if depth and stencil attachments
+are not the same renderbuffer.`
+      );
+    default:
+      throw new Error('turbojs: Unknown framebuffer status returned.');
   }
 
   gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -207,7 +224,24 @@ export const run: (data: TypedArray, code: string) => TypedArray = (
   gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
-  gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, data);
+  gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, ipt.data);
 
-  return data;
+  return ipt.data.subarray(0, ipt.length);
+};
+
+export const alloc: (size: number) => IPT = (
+  size: number
+): IPT => {
+  // A sane limit for most GPUs out there.
+  // JS falls apart before GLSL limits could ever be reached.
+  if (size > 16777216) {
+    throw new Error(`turbojs: Whoops, the maximum array size is exceeded!`);
+  }
+
+  const ns: number = Math.pow(Math.pow(2, Math.ceil(Math.log(size) / 1.386) - 1), 2);
+
+  return {
+    data: new Float32Array(ns * 16),
+    length: size,
+  };
 };
