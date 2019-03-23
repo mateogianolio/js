@@ -2,7 +2,11 @@
   "name": "turbojs",
   "version": "1.0.2",
   "description": "GPGPU for the web.",
-  "main": "turbo.js",
+  "main": "built/index.js",
+  "scripts": {
+    "lint": "tslint -p . -c tslint.json 'src/*.ts'",
+    "build": "tsc"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/turbo/js.git"
@@ -16,5 +20,10 @@
   "bugs": {
     "url": "https://github.com/turbo/js/issues"
   },
-  "homepage": "https://github.com/turbo/js#readme"
+  "homepage": "https://github.com/turbo/js#readme",
+  "devDependencies": {
+    "@types/node": "^11.11.6",
+    "tslint": "^5.14.0",
+    "typescript": "^3.3.4000"
+  }
 }
